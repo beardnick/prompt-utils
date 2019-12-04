@@ -14,7 +14,7 @@ import (
 var db *redis.Client
 
 var CmdSuggests = []prompt.Suggest{
-	{"APPEND", " value append a value to a key"},
+	{"APPEND", "value append a value to a key"},
 	{"BITCOUNT", "count set bits in a string"},
 	{"SET", "set value in key"},
 	{"SETNX", "set if not exist value in key"},

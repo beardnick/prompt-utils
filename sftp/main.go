@@ -7,17 +7,28 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/c-bata/go-prompt"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
-func connect(url string) (*sftp.Client, error) {
+var client *sftp.Client
+
+var CmdSuggests = []prompt.Suggest{
+	{"ls", "list files and directories"},
+	{"put", "upload files"},
+	{"exit", "close the prompt"},
+}
+
+var FileSuggests []prompt.Suggest
+
+func connect(url string) error {
 	var (
-		sshClient  *ssh.Client
-		sftpClient *sftp.Client
+		sshClient *ssh.Client
 	)
 	account := url[:strings.Index(url, "@")]
 	host := url[strings.Index(url, "@")+1:]
@@ -38,16 +49,16 @@ func connect(url string) (*sftp.Client, error) {
 	// connet to ssh
 	addr := fmt.Sprintf("%s:%d", host, port)
 	if sshClient, err = ssh.Dial("tcp", addr, config); err != nil {
-		return nil, err
+		return err
 	}
 	// create sftp client
-	if sftpClient, err = sftp.NewClient(sshClient); err != nil {
-		return nil, err
+	if client, err = sftp.NewClient(sshClient); err != nil {
+		return err
 	}
-	return sftpClient, nil
+	return nil
 }
 
-func uploadFile(sftpClient *sftp.Client, localFilePath string, remotePath string) {
+func uploadFile(localFilePath string, remotePath string) {
 	srcFile, err := os.Open(localFilePath)
 	if err != nil {
 		fmt.Println("os.Open error : ", localFilePath)
@@ -58,7 +69,7 @@ func uploadFile(sftpClient *sftp.Client, localFilePath string, remotePath string
 
 	var remoteFileName = path.Base(localFilePath)
 
-	dstFile, err := sftpClient.Create(path.Join(remotePath, remoteFileName))
+	dstFile, err := client.Create(path.Join(remotePath, remoteFileName))
 	if err != nil {
 		fmt.Println("sftpClient.Create error : ", path.Join(remotePath, remoteFileName))
 		log.Fatal(err)
@@ -76,7 +87,14 @@ func uploadFile(sftpClient *sftp.Client, localFilePath string, remotePath string
 	fmt.Println(localFilePath + "  copy file to remote server finished!")
 }
 
-func uploadDirectory(sftpClient *sftp.Client, localPath string, remotePath string) {
+func refresh() {
+	for {
+		time.Sleep(time.Second)
+		refreshFiles()
+	}
+}
+
+func uploadDirectory(localPath string, remotePath string) {
 	localFiles, err := ioutil.ReadDir(localPath)
 	if err != nil {
 		log.Fatal("read dir list fail ", err)
@@ -86,10 +104,10 @@ func uploadDirectory(sftpClient *sftp.Client, localPath string, remotePath strin
 		localFilePath := path.Join(localPath, backupDir.Name())
 		remoteFilePath := path.Join(remotePath, backupDir.Name())
 		if backupDir.IsDir() {
-			sftpClient.Mkdir(remoteFilePath)
-			uploadDirectory(sftpClient, localFilePath, remoteFilePath)
+			client.Mkdir(remoteFilePath)
+			uploadDirectory(localFilePath, remoteFilePath)
 		} else {
-			uploadFile(sftpClient, path.Join(localPath, backupDir.Name()), remotePath)
+			uploadFile(path.Join(localPath, backupDir.Name()), remotePath)
 		}
 	}
 
@@ -141,11 +159,61 @@ func publicKeyAuthFunc() (ssh.AuthMethod, error) {
 	return ssh.PublicKeys(signer), nil
 }
 
-func main() {
-	client, err := connect("qianz@192.168.3.227")
+func executor(in string) {
+	if in == "exit" {
+		os.Exit(0)
+	}
+}
+
+func completer(in prompt.Document) []prompt.Suggest {
+	line := in.CurrentLineBeforeCursor()
+	args := strings.Split(line, " ")
+	if len(args) <= 1 {
+		return prompt.FilterHasPrefix(CmdSuggests, in.GetWordBeforeCursor(), true)
+	}
+	return prompt.FilterHasPrefix(FileSuggests, in.GetWordBeforeCursor(), true)
+}
+
+func refreshFiles() {
+	FileSuggests = []prompt.Suggest{}
+	pwd, err := client.Getwd()
 	if err != nil {
 		fmt.Println("err:", err)
 	}
-	dir, _ := client.Getwd()
-	fmt.Println("client:", dir)
+	walker := client.Walk(pwd)
+	for walker.Step() {
+		dir := walker.Stat()
+		filetype := "file"
+		if dir.IsDir() {
+			filetype = "directory"
+		}
+		FileSuggests = append(FileSuggests, prompt.Suggest{Text: dir.Name(), Description: filetype})
+	}
+}
+
+func main() {
+	args := os.Args
+	if len(args) < 2 {
+		fmt.Println("connect url is needed !")
+		return
+	}
+	pattern := regexp.MustCompile("[a-z]@[0-9.]")
+	if !pattern.MatchString(args[1]) {
+		fmt.Println("url should be user@host")
+		return
+	}
+	err := connect(args[1])
+	if err != nil {
+		fmt.Println("err:", err)
+		return
+	}
+	go refresh()
+	p := prompt.New(
+		executor,
+		completer,
+		//prompt.OptionLivePrefix(livePrefix),
+		prompt.OptionPrefix(args[1]+"> "),
+		prompt.OptionTitle("sftp-prompt"),
+	)
+	p.Run()
 }
