@@ -21,10 +21,35 @@ var client *sftp.Client
 var CmdSuggests = []prompt.Suggest{
 	{"ls", "list files and directories"},
 	{"put", "upload files"},
+	{"cd", "change working directory"},
 	{"exit", "close the prompt"},
 }
 
+func GetCwd() (string, error) {
+	if len(Cwd) == 0 {
+		pwd, err := client.Getwd()
+		if err != nil {
+			fmt.Println("err:", err)
+			return "", err
+		}
+		Cwd = pwd
+	}
+	return Cwd, nil
+}
+
 var FileSuggests []prompt.Suggest
+var FileSet = make(map[string]bool)
+var Cwd = ""
+
+//func GetFile(file string) error {
+//remote, err := client.Open(file)
+//if err != nil {
+//return err
+//}
+//buf := make([]byte, 1024)
+//if length, err := remote.Read(buf); err == nil {
+//}
+//}
 
 func connect(url string) error {
 	var (
@@ -155,39 +180,86 @@ func publicKeyAuthFunc() (ssh.AuthMethod, error) {
 	if err != nil {
 		log.Fatal("ssh key signer failed:", err)
 	}
-	fmt.Println("keys:", signer.PublicKey())
+	//fmt.Println("keys:", signer.PublicKey())
 	return ssh.PublicKeys(signer), nil
 }
 
 func executor(in string) {
-	if in == "exit" {
+	in = strings.TrimSpace(in)
+	args := strings.Split(in, " ")
+	if len(args) < 1 {
+		return
+	}
+	if len(args) == 1 && args[0] == "exit" {
 		os.Exit(0)
+	}
+	if len(args) == 1 && args[0] == "pwd" {
+		fmt.Println(Cwd)
+		return
+	}
+	if len(args) == 1 && args[0] == "cd" {
+		pwd, err := client.Getwd()
+		if err != nil {
+			fmt.Println("err:", err)
+			return
+		}
+		Cwd = pwd
+		FileSet = make(map[string]bool)
+		FileSuggests = []prompt.Suggest{}
+		return
+	}
+	if len(args) == 1 {
+		return
+	}
+	switch args[0] {
+	case "get":
+		//GetFile(client.Join(Cwd, args[1]))
+	case "put":
+	case "cd":
+		target := args[1]
+		current, err := GetCwd()
+		if err != nil {
+			fmt.Println("err:", err)
+			return
+		}
+		fmt.Println(current, " -> ", target)
+		Cwd = client.Join(current, target)
+		FileSet = make(map[string]bool)
+		FileSuggests = []prompt.Suggest{}
+	default:
 	}
 }
 
 func completer(in prompt.Document) []prompt.Suggest {
 	line := in.CurrentLineBeforeCursor()
 	args := strings.Split(line, " ")
-	if len(args) <= 1 {
+	if len(args) <= 1 && len(line) > 0 && line[len(line)-1] != ' ' {
 		return prompt.FilterHasPrefix(CmdSuggests, in.GetWordBeforeCursor(), true)
 	}
 	return prompt.FilterHasPrefix(FileSuggests, in.GetWordBeforeCursor(), true)
 }
 
 func refreshFiles() {
-	FileSuggests = []prompt.Suggest{}
-	pwd, err := client.Getwd()
+	pwd, err := GetCwd()
 	if err != nil {
-		fmt.Println("err:", err)
+		return
 	}
 	walker := client.Walk(pwd)
+	walker.Step()
 	for walker.Step() {
 		dir := walker.Stat()
+		if FileSet[dir.Name()] {
+			continue
+		} else {
+			FileSet[dir.Name()] = true
+		}
 		filetype := "file"
 		if dir.IsDir() {
+			walker.SkipDir()
 			filetype = "directory"
 		}
 		FileSuggests = append(FileSuggests, prompt.Suggest{Text: dir.Name(), Description: filetype})
+		//FileSuggests = append(FileSuggests, prompt.Suggest{Text: walker.Path()})
 	}
 }
 
