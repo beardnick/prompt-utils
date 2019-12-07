@@ -41,15 +41,34 @@ var FileSuggests []prompt.Suggest
 var FileSet = make(map[string]bool)
 var Cwd = ""
 
-//func GetFile(file string) error {
-//remote, err := client.Open(file)
-//if err != nil {
-//return err
-//}
-//buf := make([]byte, 1024)
-//if length, err := remote.Read(buf); err == nil {
-//}
-//}
+func GetFile(file string) error {
+	remote, err := client.Open(file)
+	defer remote.Close()
+	if err != nil {
+		return err
+	}
+	info, err := os.Stat(path.Base(file))
+	if err == nil {
+		return fmt.Errorf("file %s is already exists", info.Name())
+	}
+	local, err := os.OpenFile(path.Base(file), os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	defer local.Close()
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, 1024)
+	if _, err := remote.Read(buf); err == nil {
+		//fmt.Println("length:", length)
+		//fmt.Println("file:", buf)
+		_, err = local.Write(buf)
+		if err != nil {
+			return err
+		}
+	} else {
+		return err
+	}
+	return nil
+}
 
 func connect(url string) error {
 	var (
@@ -88,7 +107,6 @@ func uploadFile(localFilePath string, remotePath string) {
 	if err != nil {
 		fmt.Println("os.Open error : ", localFilePath)
 		log.Fatal(err)
-
 	}
 	defer srcFile.Close()
 
@@ -213,7 +231,11 @@ func executor(in string) {
 	}
 	switch args[0] {
 	case "get":
-		//GetFile(client.Join(Cwd, args[1]))
+		err := GetFile(client.Join(Cwd, args[1]))
+		if err != nil {
+			fmt.Println("err:", err)
+			return
+		}
 	case "put":
 	case "cd":
 		target := args[1]
