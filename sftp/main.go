@@ -182,15 +182,27 @@ func executor(in string) {
 //    }
 //}
 
+// complete source : remote file, local file, cmd name, option name, error source(? complete nothing and display error)
+// line wrapper: first word, options,
+
 func completer(in prompt.Document) []prompt.Suggest {
 	line := in.CurrentLine()
-	args := strings.Split(line, " ")
-	if len(args) == 0 {
-		return nil
-	}
-	position := in.CursorPositionCol()
-	if position == len(args[0]) {
-		return prompt.FilterHasPrefix(CmdSuggests, in.GetWordBeforeCursor(), true)
+	//args := strings.Split(line, " ")
+	//if len(args) == 0 {
+	//    return nil
+	//}
+	//position := in.CursorPositionCol()
+	//if position == len(args[0]) {
+	//    return prompt.FilterHasPrefix(CmdSuggests, in.GetWordBeforeCursor(), true)
+	//}
+	//cmdCompleter := Completer{Source: CmdSource{}}.Of("^(ls|get)")
+	fileCompleter := Completer{Source: &FileSource{Connect: &sftpInstance}}.Of("^(ls\\s+|get\\s+)")
+	//if cmdCompleter.Match(line) {
+	//    return prompt.FilterHasPrefix(cmdCompleter.Source.Get(), in.GetWordBeforeCursor(), true)
+	//}
+	if fileCompleter.Match(line) {
+		fileCompleter.Source.Refresh()
+		return prompt.FilterHasPrefix(fileCompleter.Source.Get(), in.GetWordBeforeCursor(), true)
 	}
 	return nil
 	//line := in.CurrentLineBeforeCursor()

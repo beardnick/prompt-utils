@@ -100,11 +100,14 @@ func (c Get) Options() []Option {
 	panic("not implemented")
 }
 
+// #TODO: 25-02-20 实现文件下载 //
 func (c Get) Execute(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("file name needed")
 	}
-	return GetFile(args[0])
+	//return GetFile(args[0])
+	fmt.Println("get ", args[0])
+	return nil
 }
 
 func GetFile(file string) error {

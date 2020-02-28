@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/user"
 	"strings"
 	"time"
@@ -23,21 +24,30 @@ type Sftp struct {
 	Client     *sftp.Client
 }
 
-func (s Sftp) LGetCwd() string {
+//func (s Sftp) RemotePath() string {
+//    return s.remotePath
+//}
+
+func (s *Sftp) LocalPath() string {
 	return s.localPath
 }
 
-func (s Sftp) GetCwd() string {
+func (s *Sftp) LGetCwd() string {
+	return s.localPath
+}
+
+func (s *Sftp) GetCwd() string {
 	return s.remotePath
 }
 
-//func (s Sftp) Ls() []os.FileInfo {
-//    files, err := s.Client.ReadDir(s.remotePath)
-//    if err != nil {
-//        log.Fatal("read dir err:", err)
-//    }
-//    return files
-//}
+func (s *Sftp) RemoteFiles() []os.FileInfo {
+	log.Println("sftp.remotePath:", s.remotePath)
+	files, err := s.Client.ReadDir(s.remotePath)
+	if err != nil {
+		log.Fatal("read dir err:", err)
+	}
+	return files
+}
 
 //// #TODO: 23-02-20 ls local files //
 //func (s Sftp) LLs() []os.FileInfo {
@@ -48,9 +58,10 @@ func (s Sftp) GetCwd() string {
 //    return files
 //}
 
-func (s Sftp) Connect(url string) error {
+func (s *Sftp) Connect(url string) error {
 	account := url[:strings.Index(url, "@")]
 	host := url[strings.Index(url, "@")+1:]
+	log.Printf("account:%v host:%v", account, host)
 	config := &ssh.ClientConfig{
 		Timeout:         time.Second * 10,
 		User:            account,
@@ -75,6 +86,11 @@ func (s Sftp) Connect(url string) error {
 		return err
 	}
 	s.Client = client
+	s.remotePath, err = s.Client.Getwd()
+	if err != nil {
+		return err
+	}
+	log.Printf("remotePath: %v", s.remotePath)
 	return nil
 }
 
