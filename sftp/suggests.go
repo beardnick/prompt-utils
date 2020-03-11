@@ -1,12 +1,5 @@
 package main
 
-import "github.com/c-bata/go-prompt"
-
-var (
-	FileSuggests = []prompt.Suggest{}
-	CmdSuggests  = []prompt.Suggest{}
-)
-
 //Available commands:
 //bye                                Quit sftp
 //cd path                            Change remote directory to 'path'

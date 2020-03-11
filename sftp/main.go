@@ -9,7 +9,9 @@ import (
 	"github.com/c-bata/go-prompt"
 )
 
-var sftpInstance = Sftp{}
+var (
+	sftpCtx *Sftp
+)
 
 //func uploadFile(localFilePath string, remotePath string) {
 //    srcFile, err := os.Open(localFilePath)
@@ -99,10 +101,10 @@ func executor(in string) {
 	if len(args) < 1 {
 		return
 	}
-	if Cmds[args[0]] == nil {
+	if sftpCtx.Cmds[args[0]] == nil {
 		fmt.Println("no such command: ", args[0])
 	}
-	if err := Cmds[args[0]].Execute(args[1:]); err != nil {
+	if err := sftpCtx.Cmds[args[0]].Execute(args[1:]); err != nil {
 		fmt.Println("err:", err)
 	}
 	return
@@ -196,7 +198,7 @@ func completer(in prompt.Document) []prompt.Suggest {
 	//    return prompt.FilterHasPrefix(CmdSuggests, in.GetWordBeforeCursor(), true)
 	//}
 	//cmdCompleter := Completer{Source: CmdSource{}}.Of("^(ls|get)")
-	fileCompleter := Completer{Source: &FileSource{Connect: &sftpInstance}}.Of("^(ls\\s+|get\\s+)")
+	fileCompleter := Completer{Source: &FileSource{Connection: sftpCtx}}.Of("^(ls\\s+|get\\s+)")
 	//if cmdCompleter.Match(line) {
 	//    return prompt.FilterHasPrefix(cmdCompleter.Source.Get(), in.GetWordBeforeCursor(), true)
 	//}
@@ -224,7 +226,8 @@ func main() {
 		fmt.Println("url should be user@host")
 		return
 	}
-	err := sftpInstance.Connect(args[1])
+	var err error
+	sftpCtx, err = NewSftp(args[1])
 	if err != nil {
 		fmt.Println("err:", err)
 		return

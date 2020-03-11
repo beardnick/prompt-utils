@@ -10,12 +10,12 @@ type ISource interface {
 }
 
 type FileSource struct {
-	source  []prompt.Suggest
-	Connect *Sftp
+	source     []prompt.Suggest
+	Connection *Sftp
 }
 
 func (s *FileSource) Refresh() {
-	files := s.Connect.RemoteFiles()
+	files := s.Connection.RemoteFiles()
 	for _, v := range files {
 		if v.IsDir() {
 			s.source = append(s.source, prompt.Suggest{v.Name(), "dir"})

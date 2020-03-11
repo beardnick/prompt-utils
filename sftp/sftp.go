@@ -9,24 +9,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/c-bata/go-prompt"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
-var (
-	Cmds map[string]ICmd = map[string]ICmd{}
-)
-
+// sftp的上下文，对原生sftp库的封装
 type Sftp struct {
 	localPath  string
 	remotePath string
 	Client     *sftp.Client
+	Cmds       map[string]ICmd
 }
-
-//func (s Sftp) RemotePath() string {
-//    return s.remotePath
-//}
 
 func (s *Sftp) LocalPath() string {
 	return s.localPath
@@ -94,18 +87,25 @@ func (s *Sftp) Connect(url string) error {
 	return nil
 }
 
-func init() {
+func NewSftp(url string) (*Sftp, error) {
+	s := &Sftp{}
+	err := s.Connect(url)
+	if err != nil {
+		return nil, err
+	}
 	l := []ICmd{
-		Ls{},
-		Exit{},
-		Quit{},
-		Bye{},
-		Get{}.Init(),
+		&Ls{},
+		&Exit{},
+		&Quit{},
+		&Bye{},
+		&Get{},
 	}
+	s.Cmds = map[string]ICmd{}
 	for _, v := range l {
-		Cmds[v.Name()] = v
-		CmdSuggests = append(CmdSuggests, prompt.Suggest{v.Name(), v.Description()})
+		v.Init(s)
+		s.Cmds[v.Name()] = v
 	}
+	return s, nil
 }
 
 func publicKeyAuthFunc() (ssh.AuthMethod, error) {

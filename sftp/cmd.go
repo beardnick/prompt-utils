@@ -10,53 +10,80 @@ import (
 // option name, description
 
 type ICmd interface {
+	Init(sftp *Sftp)
+	Sftp() *Sftp
 	Name() string
 	Description() string
 	Options() []Option
 	Execute(args []string) error
 }
 
-type IFlagCmd interface {
-	ICmd
-	Init() ICmd
+type BaseCmd struct {
+	context *Sftp
 }
 
-type Ls struct {
+func (b *BaseCmd) Init(sftp *Sftp) {
+	b.context = sftp
 }
 
-func (c Ls) Name() string {
-	return "ls"
+func (b *BaseCmd) Sftp() *Sftp {
+	return b.context
 }
 
-func (c Ls) Description() string {
-	return "Display remote directory listing"
-}
-
-func (c Ls) Options() []Option {
+func (b *BaseCmd) Name() string {
 	panic("implement me")
 }
 
-func (c Ls) Execute(args []string) error {
+func (b *BaseCmd) Description() string {
+	panic("implement me")
+}
+
+func (b *BaseCmd) Options() []Option {
+	panic("implement me")
+}
+
+func (b *BaseCmd) Execute(args []string) error {
+	panic("implement me")
+}
+
+type Ls struct {
+	BaseCmd
+}
+
+func (c *Ls) Name() string {
+	return "ls"
+}
+
+func (c *Ls) Description() string {
+	return "Display remote directory listing"
+}
+
+func (c *Ls) Options() []Option {
+	panic("implement me")
+}
+
+func (c *Ls) Execute(args []string) error {
 	fmt.Println("exec Ls")
 	return nil
 }
 
 type Exit struct {
+	BaseCmd
 }
 
-func (c Exit) Name() string {
+func (c *Exit) Name() string {
 	return "exit"
 }
 
-func (c Exit) Description() string {
+func (c *Exit) Description() string {
 	return "Quit sftp"
 }
 
-func (c Exit) Options() []Option {
+func (c *Exit) Options() []Option {
 	panic("not implemented")
 }
 
-func (c Exit) Execute(args []string) error {
+func (c *Exit) Execute(args []string) error {
 	os.Exit(0)
 	return nil
 }
@@ -65,7 +92,7 @@ type Quit struct {
 	Exit
 }
 
-func (c Quit) Name() string {
+func (c *Quit) Name() string {
 	return "quit"
 }
 
@@ -73,7 +100,7 @@ type Bye struct {
 	Exit
 }
 
-func (c Bye) Name() string {
+func (c *Bye) Name() string {
 	return "bye"
 }
 
@@ -81,27 +108,23 @@ type Option struct {
 }
 
 type Get struct {
+	BaseCmd
 }
 
-func (c Get) Init() ICmd {
-	// #TODO: 24-02-20 初始化flag //
-	return c
-}
-
-func (c Get) Name() string {
+func (c *Get) Name() string {
 	return "get"
 }
 
-func (c Get) Description() string {
+func (c *Get) Description() string {
 	return "Download file"
 }
 
-func (c Get) Options() []Option {
+func (c *Get) Options() []Option {
 	panic("not implemented")
 }
 
 // #TODO: 25-02-20 实现文件下载 //
-func (c Get) Execute(args []string) error {
+func (c *Get) Execute(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("file name needed")
 	}
@@ -111,7 +134,7 @@ func (c Get) Execute(args []string) error {
 }
 
 func GetFile(file string) error {
-	remote, err := sftpInstance.Client.Open(file)
+	remote, err := sftpCtx.Client.Open(file)
 	defer remote.Close()
 	if err != nil {
 		return err
@@ -137,4 +160,24 @@ func GetFile(file string) error {
 		return err
 	}
 	return nil
+}
+
+type Cd struct {
+	BaseCmd
+}
+
+func (c *Cd) Name() string {
+	return "cd"
+}
+
+func (c *Cd) Description() string {
+	return "Change remote directory to 'path'"
+}
+
+func (c *Cd) Options() Option {
+	panic("not implemented")
+}
+
+func (c *Cd) Execute(args []string) error {
+	panic("not implemented")
 }
