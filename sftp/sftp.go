@@ -25,6 +25,10 @@ func (s *Sftp) LocalPath() string {
 	return s.localPath
 }
 
+func (s *Sftp) RemotePath() string {
+	return s.remotePath
+}
+
 func (s *Sftp) LGetCwd() string {
 	return s.localPath
 }
@@ -36,6 +40,14 @@ func (s *Sftp) GetCwd() string {
 func (s *Sftp) RemoteFiles() []os.FileInfo {
 	log.Println("sftp.remotePath:", s.remotePath)
 	files, err := s.Client.ReadDir(s.remotePath)
+	if err != nil {
+		log.Fatal("read dir err:", err)
+	}
+	return files
+}
+
+func (s *Sftp) RemotePathFiles(path string) []os.FileInfo {
+	files, err := s.Client.ReadDir(path)
 	if err != nil {
 		log.Fatal("read dir err:", err)
 	}

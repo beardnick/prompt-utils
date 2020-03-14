@@ -63,7 +63,11 @@ func (c *Ls) Options() []Option {
 }
 
 func (c *Ls) Execute(args []string) error {
-	fmt.Println("exec Ls")
+	path := c.Sftp().Client.Join(c.Sftp().RemotePath(), args[0])
+	files := c.Sftp().RemotePathFiles(path)
+	for _, v := range files {
+		fmt.Println(v.Name())
+	}
 	return nil
 }
 
