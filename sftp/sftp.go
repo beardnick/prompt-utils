@@ -47,6 +47,7 @@ func (s *Sftp) RemoteFiles() []os.FileInfo {
 }
 
 func (s *Sftp) RemotePathFiles(path string) []os.FileInfo {
+	//log.Println("path:", path)
 	files, err := s.Client.ReadDir(path)
 	if err != nil {
 		log.Fatal("read dir err:", err)

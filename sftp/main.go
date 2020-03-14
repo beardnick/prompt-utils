@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/c-bata/go-prompt"
 )
@@ -216,6 +218,15 @@ func completer(in prompt.Document) []prompt.Suggest {
 }
 
 func main() {
+	// 设置日志头
+	log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
+	f, err := os.OpenFile(time.Now().Format("2006-01-02")+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+	log.SetOutput(f)
+	//var err error
 	args := os.Args
 	if len(args) < 2 {
 		fmt.Println("connect url is needed !")
@@ -226,7 +237,6 @@ func main() {
 		fmt.Println("url should be user@host")
 		return
 	}
-	var err error
 	sftpCtx, err = NewSftp(args[1])
 	if err != nil {
 		fmt.Println("err:", err)
