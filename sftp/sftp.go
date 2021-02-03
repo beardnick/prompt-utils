@@ -1,11 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -64,9 +67,20 @@ func (s *Sftp) RemotePathFiles(path string) []os.FileInfo {
 //    return files
 //}
 
-func (s *Sftp) Connect(url string) error {
-	account := url[:strings.Index(url, "@")]
-	host := url[strings.Index(url, "@")+1:]
+var sshAddr = regexp.MustCompile(`([a-zA-Z]+)@([1-9.]+)(:[0-9]+)?`)
+
+func (s *Sftp) Connect(url string) (err error) {
+	if !sshAddr.MatchString(url) {
+		return errors.New("not a valid ssh address")
+	}
+	groups := sshAddr.FindStringSubmatch(url)
+	account := groups[1]
+	host := groups[2]
+	p := strings.Trim(groups[3], ":")
+	port, err := strconv.Atoi(p)
+	if err != nil {
+		port = 22
+	}
 	log.Printf("account:%v host:%v", account, host)
 	config := &ssh.ClientConfig{
 		Timeout:         time.Second * 10,
@@ -81,7 +95,7 @@ func (s *Sftp) Connect(url string) error {
 		log.Fatal("now public key")
 	}
 	// connet to ssh
-	addr := fmt.Sprintf("%s:%d", host, 36000)
+	addr := fmt.Sprintf("%s:%d", host, port)
 	sshClient, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
 		return err
