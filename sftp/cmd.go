@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"path"
 )
@@ -134,35 +136,30 @@ func (c *Get) Execute(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("file name needed")
 	}
-	//return GetFile(args[0])
+	return GetFile(args[0])
 	fmt.Println("get ", args[0])
 	return nil
 }
 
 func GetFile(file string) error {
 	remote, err := sftpCtx.Client.Open(file)
-	defer remote.Close()
 	if err != nil {
 		return err
 	}
+	defer remote.Close()
 	info, err := os.Stat(path.Base(file))
 	if err == nil {
 		return fmt.Errorf("file %s is already exists", info.Name())
 	}
+	log.Println("open remote file:", remote.Name())
 	local, err := os.OpenFile(path.Base(file), os.O_CREATE|os.O_WRONLY, os.ModePerm)
-	defer local.Close()
 	if err != nil {
 		return err
 	}
-	buf := make([]byte, 1024)
-	if _, err := remote.Read(buf); err == nil {
-		//fmt.Println("length:", length)
-		//fmt.Println("file:", buf)
-		_, err = local.Write(buf)
-		if err != nil {
-			return err
-		}
-	} else {
+	defer local.Close()
+	log.Println("open local file:", local.Name())
+	_, err = io.Copy(local, remote)
+	if err != nil {
 		return err
 	}
 	return nil

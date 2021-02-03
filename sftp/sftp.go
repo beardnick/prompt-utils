@@ -81,7 +81,7 @@ func (s *Sftp) Connect(url string) error {
 		log.Fatal("now public key")
 	}
 	// connet to ssh
-	addr := fmt.Sprintf("%s:%d", host, 22)
+	addr := fmt.Sprintf("%s:%d", host, 36000)
 	sshClient, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
 		return err
