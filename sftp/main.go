@@ -23,7 +23,10 @@ func executor(in string) {
 		return
 	}
 	if sftpCtx.Cmds[args[0]] == nil {
-		fmt.Println("no such command: ", args[0])
+		if strings.TrimSpace(args[0]) != "" {
+			fmt.Println("no such command:", args[0])
+		}
+		return
 	}
 	if err := sftpCtx.Cmds[args[0]].Execute(args[1:]); err != nil {
 		fmt.Println("err:", err)
@@ -33,30 +36,12 @@ func executor(in string) {
 
 func completer(in prompt.Document) []prompt.Suggest {
 	line := in.CurrentLine()
-	//args := strings.Split(line, " ")
-	//if len(args) == 0 {
-	//    return nil
-	//}
-	//position := in.CursorPositionCol()
-	//if position == len(args[0]) {
-	//    return prompt.FilterHasPrefix(CmdSuggests, in.GetWordBeforeCursor(), true)
-	//}
-	//cmdCompleter := Completer{Source: CmdSource{}}.Of("^(ls|get)")
 	fileCompleter := Completer{Source: &FileSource{Connection: sftpCtx}}.Of("^(ls\\s+|get\\s+)")
-	//if cmdCompleter.Match(line) {
-	//    return prompt.FilterHasPrefix(cmdCompleter.Source.Get(), in.GetWordBeforeCursor(), true)
-	//}
 	if fileCompleter.Match(line) {
 		fileCompleter.Source.Refresh()
 		return prompt.FilterHasPrefix(fileCompleter.Source.Get(), in.GetWordBeforeCursor(), true)
 	}
 	return nil
-	//line := in.CurrentLineBeforeCursor()
-	//args := strings.Split(line, " ")
-	//if len(args) <= 1 && len(line) > 0 && line[len(line)-1] != ' ' {
-	//    return prompt.FilterHasPrefix(CmdSuggests, in.GetWordBeforeCursor(), true)
-	//}
-	//return prompt.FilterHasPrefix(FileSuggests, in.GetWordBeforeCursor(), true)
 }
 
 func main() {
