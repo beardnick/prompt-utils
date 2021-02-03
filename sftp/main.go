@@ -17,15 +17,16 @@ var (
 
 func executor(in string) {
 	in = strings.TrimSpace(in)
-	args := strings.Split(in, " ")
+	args := strings.Fields(in)
 	// 没有指令
 	if len(args) < 1 {
 		return
 	}
+	if strings.TrimSpace(args[0]) == "" {
+		return
+	}
 	if sftpCtx.Cmds[args[0]] == nil {
-		if strings.TrimSpace(args[0]) != "" {
-			fmt.Println("no such command:", args[0])
-		}
+		fmt.Println("no such command:", args[0])
 		return
 	}
 	if err := sftpCtx.Cmds[args[0]].Execute(args[1:]); err != nil {

@@ -65,9 +65,12 @@ func (c *Ls) Options() []Option {
 }
 
 func (c *Ls) Execute(args []string) error {
+	if len(args) < 1 {
+		args = append(args, "")
+	}
 	path := c.Sftp().Client.Join(c.Sftp().RemotePath(), args[0])
 	// #TODO: 20-03-14 这里的log怎么总是打不出来 //
-	//log.Println("path:", path)
+	log.Println("path:", path)
 	files := c.Sftp().RemotePathFiles(path)
 	for _, v := range files {
 		fmt.Println(v.Name())
